@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Dashboard monitoring greenhouse modern — pantau suhu udara, suhu tanah, kelembapan, dan kelembapan tanah secara realtime">
+  <meta name="theme-color" content="#34c68a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>GreenHouse — Smart Farming Dashboard</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/history.css">
+
+  <!-- Chart.js CDN (lightweight) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- ========== HEADER ========== -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="brand-icon">🌿</div>
+        <h1>Green<span>House</span></h1>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" id="btn-refresh" title="Refresh data">
+          <span class="icon">⟳</span>
+        </button>
+        <button class="header-btn" title="Notifikasi">
+          🔔
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== TOAST CONTAINER ========== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ========== MAIN ========== -->
+  <main class="main-container">
+
+    <!-- ---- Summary Cards ---- -->
+    <section>
+      <div class="section-title">
+        <div class="icon">📊</div>
+        Ringkasan Sensor
+      </div>
+      <div class="summary-strip">
+        <!-- Air Temperature -->
+        <div class="summary-card temp" id="summary-temp">
+          <div class="card-header">
+            <span class="card-label">Suhu Udara</span>
+            <div class="card-icon">🌡️</div>
+          </div>
+          <div class="card-value">--<span class="unit">°C</span></div>
+          <div class="card-sub">Memuat data...</div>
+        </div>
+
+        <!-- Humidity -->
+        <div class="summary-card humidity" id="summary-humidity">
+          <div class="card-header">
+            <span class="card-label">Kelembapan Udara</span>
+            <div class="card-icon">💧</div>
+          </div>
+          <div class="card-value">--<span class="unit">%</span></div>
+          <div class="card-sub">Memuat data...</div>
+        </div>
+
+        <!-- Soil Moisture -->
+        <div class="summary-card soil" id="summary-soil">
+          <div class="card-header">
+            <span class="card-label">Kelembapan Tanah</span>
+            <div class="card-icon">🌱</div>
+          </div>
+          <div class="card-value">--<span class="unit">%</span></div>
+          <div class="card-sub">Memuat data...</div>
+        </div>
+
+        <!-- Soil Temperature -->
+        <div class="summary-card soil-temp" id="summary-soil-temp">
+          <div class="card-header">
+            <span class="card-label">Suhu Tanah</span>
+            <div class="card-icon">🪴</div>
+          </div>
+          <div class="card-value">--<span class="unit">°C</span></div>
+          <div class="card-sub">Memuat data...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Status Row ---- -->
+    <section>
+      <div class="status-row">
+        <!-- Pump -->
+        <div class="status-chip pump-off" id="status-pump">
+          <div class="chip-icon">🚫</div>
+          <span class="chip-label">Pompa</span>
+          <span class="chip-value">--</span>
+        </div>
+
+        <!-- Weather -->
+        <div class="status-chip weather" id="status-weather">
+          <div class="chip-icon">🌤️</div>
+          <span class="chip-label">Cuaca</span>
+          <span class="chip-value">--</span>
+        </div>
+
+        <!-- Rain -->
+        <div class="status-chip rain-no" id="status-rain">
+          <div class="chip-icon">☀️</div>
+          <span class="chip-label">Hujan</span>
+          <span class="chip-value">--</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Filter Bar ---- -->
+    <section>
+      <div class="section-title">
+        <div class="icon">🔍</div>
+        Filter Data
+      </div>
+      <div class="filter-bar">
+        <!-- Quick filters -->
+        <div class="filter-quick">
+          <button class="filter-chip active" data-range="today">Hari Ini</button>
+          <button class="filter-chip" data-range="3days">3 Hari</button>
+          <button class="filter-chip" data-range="7days">7 Hari</button>
+          <button class="filter-chip" data-range="30days">30 Hari</button>
+        </div>
+
+        <!-- Date range -->
+        <div class="filter-date-row">
+          <input type="date" class="filter-date-input" id="filter-date-start" aria-label="Tanggal mulai">
+          <span style="color:var(--color-text-muted);font-size:0.8rem;">—</span>
+          <input type="date" class="filter-date-input" id="filter-date-end" aria-label="Tanggal akhir">
+          <button class="filter-apply-btn" id="filter-apply-btn">Terapkan</button>
+        </div>
+
+        <!-- Sensor filter -->
+        <div class="filter-sensor-row">
+          <select class="filter-sensor-select" id="filter-sensor" aria-label="Filter sensor">
+            <option value="all">Semua Sensor</option>
+            <option value="temperature">🌡️ Suhu Udara</option>
+            <option value="soil_temperature">🪴 Suhu Tanah</option>
+            <option value="humidity">💧 Kelembapan Udara</option>
+            <option value="soil_moisture">🌱 Kelembapan Tanah</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Chart Section ---- -->
+    <section>
+      <div class="section-title">
+        <div class="icon">📈</div>
+        Grafik Monitoring
+      </div>
+
+      <!-- Chart Tabs -->
+      <div class="chart-tabs">
+        <button class="chart-tab active" data-mode="realtime">⚡ Realtime</button>
+        <button class="chart-tab" data-mode="daily">📅 Harian</button>
+        <button class="chart-tab" data-mode="weekly">📊 Mingguan</button>
+        <button class="chart-tab" data-mode="monthly">📆 Bulanan</button>
+      </div>
+
+      <!-- Chart Container -->
+      <div class="chart-container" id="chart-container">
+        <div class="chart-wrapper">
+          <canvas id="main-chart"></canvas>
+        </div>
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="chart-loading">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Statistics ---- -->
+    <section>
+      <div class="section-title">
+        <div class="icon">📋</div>
+        Statistik
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Rata-rata Suhu Udara</div>
+          <div class="stat-value" id="stat-avg-temp">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Rata-rata Suhu Tanah</div>
+          <div class="stat-value" id="stat-avg-soil-temp">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Rata-rata Kelembapan Udara</div>
+          <div class="stat-value" id="stat-avg-humidity">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Rata-rata Kelembapan Tanah</div>
+          <div class="stat-value" id="stat-avg-soil">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Data</div>
+          <div class="stat-value" id="stat-total-records">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pompa Aktif</div>
+          <div class="stat-value" id="stat-pump-on">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Kejadian Hujan</div>
+          <div class="stat-value" id="stat-rain-count">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Terakhir Update</div>
+          <div class="stat-value" id="stat-last-time">--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Data Table ---- -->
+    <section class="table-section">
+      <div class="section-title">
+        <div class="icon">📝</div>
+        History Data
+      </div>
+
+      <!-- Table wrapper -->
+      <div class="table-wrapper" id="table-wrapper">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Suhu Udara</th>
+                <th>Suhu Tanah</th>
+                <th>Kelembapan Udara</th>
+                <th>Kelembapan Tanah</th>
+                <th>Pompa</th>
+                <th>Hujan</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Rows rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+        <!-- Table loading overlay -->
+        <div class="loading-overlay" id="table-loading">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state hidden" id="table-empty">
+        <div class="empty-icon">🌾</div>
+        <h3>Belum Ada Data</h3>
+        <p>Data sensor untuk periode ini belum tersedia. Coba pilih rentang tanggal lain.</p>
+      </div>
+
+      <!-- Error State -->
+      <div class="error-state hidden" id="table-error">
+        <div class="error-icon">⚠️</div>
+        <h3>Gagal Memuat Data</h3>
+        <p>Tidak dapat terhubung ke server. Pastikan koneksi internet dan server berjalan.</p>
+        <button class="retry-btn" onclick="retryLoad()">Coba Lagi</button>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination hidden" id="pagination">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- ---- Last Updated ---- -->
+    <div class="last-updated">
+      <span class="dot"></span>
+      Terakhir diperbarui: <span id="last-updated-time">--:--:--</span>
+    </div>
+
+  </main>
+
+  <!-- ========== FLOATING ACTION BUTTON ========== -->
+  <button class="fab" id="fab" aria-label="Menu">☰</button>
+
+  <div class="fab-menu" id="fab-menu">
+    <div class="fab-menu-item">
+      <button onclick="fabScrollTop()" aria-label="Ke atas">↑</button>
+      <span>Ke Atas</span>
+    </div>
+    <div class="fab-menu-item">
+      <button onclick="fabRefresh()" aria-label="Refresh">⟳</button>
+      <span>Refresh</span>
+    </div>
+    <div class="fab-menu-item">
+      <button onclick="fabExport()" aria-label="Export CSV">📥</button>
+      <span>Export CSV</span>
+    </div>
+  </div>
+
+  <!-- ========== BACK TO TOP ========== -->
+  <button class="back-to-top" id="back-to-top" aria-label="Kembali ke atas">↑</button>
+
+  <!-- ========== JS ========== -->
+  <script src="js/history.js"></script>
+</body>
+</html>
