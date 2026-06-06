@@ -642,7 +642,7 @@ function updateTable() {
     return `<tr>
       <td>${dateStr}<br><small style="color:var(--color-text-muted)">${timeStr}</small></td>
       <td><strong>${r.temperature}</strong>°C</td>
-      <td><strong>${r.soil_temperature}</strong>°C</td>
+      <td><strong>${parseFloat(r.soil_temperature).toFixed(1)}</strong>°C</td>
       <td>${r.humidity}%</td>
       <td>${r.soil_moisture}%</td>
       <td>${pumpBadge}</td>
