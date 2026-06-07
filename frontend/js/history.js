@@ -232,7 +232,12 @@ async function loadData() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const json = await response.json();
-    state.data = Array.isArray(json) ? json : json.data || [];
+    state.data = Array.isArray(json) ? json : (json.data || []);
+
+    // DATA LAYER (PENTING)
+    state.dataAsc = state.data;                    // kronologis (chart + summary)
+    state.dataDesc = [...state.data].reverse();    // terbaru dulu (table)
+    state.latest = state.dataAsc[state.dataAsc.length - 1] || null;
 
     processData();
     showToast("Data berhasil dimuat", "success");
@@ -318,7 +323,7 @@ function generateDemoData() {
 
 // ---- Summary Cards ----
 function updateSummary() {
-  const d = state.data;
+  const d = state.dataAsc;
   if (!d.length) {
     ["temp", "soilTemp", "humidity", "soil"].forEach((k) => {
       if (dom.summaryCards[k]) {
@@ -331,7 +336,7 @@ function updateSummary() {
     return;
   }
 
-  const latest = d[0];
+  const latest = state.latest;
 
   setCardValue(
     dom.summaryCards.temp,
@@ -368,7 +373,7 @@ function setCardValue(card, value, unit, sub) {
 
 // ---- Statistics ----
 function updateStats() {
-  const d = state.data;
+  const d = state.dataAsc;
   if (!d.length) return;
 
   setText(dom.statAvgTemp, getAvg(d, "temperature") + "°C");
@@ -382,7 +387,7 @@ function updateStats() {
   );
   setText(dom.statRainCount, d.filter((r) => r.rain_status === 1).length + "x");
 
-  const latestTime = new Date(d[0].timestamp);
+  const latestTime = new Date(state.latest.timestamp);
   setText(
     dom.statLastTime,
     latestTime.toLocaleTimeString("id-ID", {
@@ -394,10 +399,9 @@ function updateStats() {
 
 // ---- Status Chips ----
 function updateStatusChips() {
-  const d = state.data;
-  if (!d.length) return;
+  if (!state.dataAsc.length) return;
 
-  const latest = d[0];
+  const latest = state.latest;
 
   // Pump
   const pumpOn = latest.pump_status === 1;
@@ -437,7 +441,7 @@ function getWeatherEmoji(weather) {
 
 // ---- Charts ----
 function updateChart() {
-  const d = state.data;
+  const d = state.dataAsc;
   if (!d.length) return;
 
   showChartLoading(true);
@@ -482,7 +486,7 @@ function updateChart() {
 }
 
 function prepareRealtimeData(data) {
-  const sliced = data.slice(0, 50).reverse();
+  const sliced = data.slice(Math.max(data.length - 50, 0));
   return {
     labels: sliced.map((r) => {
       const t = new Date(r.timestamp);
@@ -663,7 +667,7 @@ function getChartOptions() {
 
 // ---- Table ----
 function updateTable() {
-  const d = state.data;
+  const d = state.dataDesc;
 
   if (state.hasError) {
     dom.tableWrapper.classList.add("hidden");
@@ -714,7 +718,7 @@ function updateTable() {
       return `<tr>
       <td>${dateStr}<br><small style="color:var(--color-text-muted)">${timeStr}</small></td>
       <td><strong>${r.temperature}</strong>°C</td>
-      <td><strong>${parseFloat(r.soil_temperature).toFixed(1)}</strong>°C</td>
+      <td><strong>${Number(r.soil_temperature || 0).toFixed(1)}</strong>°C</td>
       <td>${r.humidity}%</td>
       <td>${r.soil_moisture}%</td>
       <td>${pumpBadge}</td>
@@ -873,7 +877,7 @@ function exportCSV() {
     "Pompa",
     "Hujan",
   ];
-  const rows = state.data.map((r) => {
+  const rows = [...state.dataAsc].reverse().map((r) => {
     const t = new Date(r.timestamp);
     return [
       t.toLocaleDateString("id-ID"),
